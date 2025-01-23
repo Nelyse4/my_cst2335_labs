@@ -7,13 +7,11 @@ void main() {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
-
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
@@ -25,8 +23,6 @@ class MyApp extends StatelessWidget {
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
 
-
-
   final String title;
 
   @override
@@ -34,63 +30,84 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  var _counter = 0.0;
-  var myFontSize= 30.0;
-  // Function to set new values for both counter and font size
-  void _setNewValue(var newValue) {
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  String imageSource = "images/question-mark.png"; // Default image
+
+  // Function to handle login logic
+  void _login() {
+    final password = _passwordController.text;
     setState(() {
-      _counter = newValue;   // Set the counter value with the slider's value
-      myFontSize = newValue; // Set the font size with the slider's value
-    });
-  }
-  void _incrementCounter(){
-    setState(() {
-      if (_counter < 99.0){
-        _counter++;
-        myFontSize++;
+      if (password == "QWERTY123") {
+        imageSource = "images/light-bulb.png"; // Correct password: Change to light bulb
+      } else {
+        imageSource = "images/stop.png"; // Incorrect password: Change to stop sign
       }
     });
   }
+
+
+
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
       appBar: AppBar(
-
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text(
+          widget.title,
+          style: const TextStyle(color: Colors.black),
+        ),
       ),
-      body: Center(
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-
-            Text(
-              'Number of times the button is pushed:',
-              style: TextStyle(fontSize: myFontSize),
+            // Username field
+            TextField(
+              controller: _usernameController,
+              decoration: const InputDecoration(
+                labelText: 'Login',
+              ),
             ),
-            Text(
-              '$_counter',
-              style: TextStyle(fontSize: myFontSize),
-            ),
+            const SizedBox(height: 10),
 
-            Slider(
-              value: _counter,
-              min: 0.0,
-              max: 100.0,
-              onChanged: _setNewValue, // Call the function to update counter and font size
-            )
+            // Password field
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Login button
+            ElevatedButton(
+              onPressed: _login,
+              child: const Text(
+                'Login',
+                style: TextStyle(color: Colors.blue, fontSize: 30),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Image that changes based on the password entered
+            Image.asset(
+              imageSource,
+              width: 300,
+              height: 300,
+            ),
           ],
         ),
       ),
-
+      // Floating Action Button to clear fields
       floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-
+        onPressed: (){},
         tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        child: const Icon(Icons.add), // Icon for the FAB
+      ),
     );
   }
 }
