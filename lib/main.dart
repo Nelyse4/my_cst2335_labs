@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -35,8 +37,44 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String imageSource = "images/question-mark.png"; // Default image
 
+  @override
+  void initState() {
+    super.initState();
+    // Delay loading credentials to ensure the Scaffold is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadCredentials();
+    });
+  }
+
+  // Function to load saved username and password
+  void _loadCredentials() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? username = prefs.getString('username');
+    String? password = prefs.getString('password');
+
+    if (username != null && password != null) {
+      _usernameController.text = username;
+      _passwordController.text = password;
+
+      // Show Snackbar
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Previous login name and passwords loaded.'),
+          action: SnackBarAction(
+            label: 'Undo',
+            onPressed: () async{
+              await Future.delayed(Duration(seconds: 1));
+              _usernameController.clear();
+              _passwordController.clear();
+            },
+          ),
+        ),
+      );
+    }
+  }
+
   // Function to handle login logic
-  void _login() {
+  void _login() async {
     final password = _passwordController.text;
     setState(() {
       if (password == "QWERTY123") {
@@ -45,9 +83,45 @@ class _MyHomePageState extends State<MyHomePage> {
         imageSource = "images/stop.png"; // Incorrect password: Change to stop sign
       }
     });
+
+    // Show AlertDialog to ask if user wants to save credentials
+    _showSaveCredentialsDialog();
   }
 
-
+  // Function to show AlertDialog
+  void _showSaveCredentialsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Save Credentials?'),
+          content: const Text('Would you like to save your username and password?'),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                // Clear saved credentials if the user selects "Cancel"
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.remove('username');
+                await prefs.remove('password');
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Save credentials if the user selects "OK"
+                SharedPreferences prefs = await SharedPreferences.getInstance();
+                await prefs.setString('username', _usernameController.text);
+                await prefs.setString('password', _passwordController.text);
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +165,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 style: TextStyle(color: Colors.blue, fontSize: 30),
               ),
             ),
+
             const SizedBox(height: 20),
 
             // Image that changes based on the password entered
@@ -104,7 +179,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       // Floating Action Button to clear fields
       floatingActionButton: FloatingActionButton(
-        onPressed: (){},
+        onPressed: () {},
         tooltip: 'Increment',
         child: const Icon(Icons.add), // Icon for the FAB
       ),
