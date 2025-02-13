@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
+import 'ProfilePage.dart'; // Import the ProfilePage
 
 void main() {
   runApp(const MyApp());
@@ -62,7 +63,7 @@ class _MyHomePageState extends State<MyHomePage> {
           content: const Text('Previous login name and passwords loaded.'),
           action: SnackBarAction(
             label: 'Undo',
-            onPressed: () async{
+            onPressed: () async {
               await Future.delayed(Duration(seconds: 1));
               _usernameController.clear();
               _passwordController.clear();
@@ -73,7 +74,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Function to handle login logic
   void _login() async {
     final password = _passwordController.text;
     setState(() {
@@ -84,11 +84,26 @@ class _MyHomePageState extends State<MyHomePage> {
       }
     });
 
-    // Show AlertDialog to ask if user wants to save credentials
-    _showSaveCredentialsDialog();
+    if (password == "QWERTY123") {
+      // Save credentials to shared preferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      await prefs.setString('username', _usernameController.text);
+      await prefs.setString('password', _passwordController.text);
+
+      // Navigate to ProfilePage after successful login
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProfilePage(username: _usernameController.text),
+        ),
+      );
+    } else {
+      _showSaveCredentialsDialog();
+    }
   }
 
-  // Function to show AlertDialog
+
+  // Function to show AlertDialog for saving credentials
   void _showSaveCredentialsDialog() {
     showDialog(
       context: context,
@@ -180,8 +195,8 @@ class _MyHomePageState extends State<MyHomePage> {
       // Floating Action Button to clear fields
       floatingActionButton: FloatingActionButton(
         onPressed: () {},
-        tooltip: 'Increment',
-        child: const Icon(Icons.add), // Icon for the FAB
+        tooltip: 'Clear Fields',
+        child: const Icon(Icons.clear), // Icon for the FAB
       ),
     );
   }
