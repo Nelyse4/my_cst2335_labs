@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:encrypted_shared_preferences/encrypted_shared_preferences.dart';
-import 'ProfilePage.dart'; // Import the ProfilePage
 
 void main() {
   runApp(const MyApp());
@@ -13,12 +10,12 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Flutter HomePage Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Shopping List App'),
     );
   }
 }
@@ -33,104 +30,68 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
+  @override
+  Widget build(BuildContext context) {
+    return const ListPage();
+  }
+}
 
-  String imageSource = "images/question-mark.png"; // Default image
+class ListPage extends StatefulWidget {
+  const ListPage({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    // Delay loading credentials to ensure the Scaffold is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadCredentials();
-    });
-  }
+  State<ListPage> createState() => _ListPageState();
+}
 
-  // Function to load saved username and password
-  void _loadCredentials() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? username = prefs.getString('username');
-    String? password = prefs.getString('password');
+class _ListPageState extends State<ListPage> {
+  final _itemController = TextEditingController();
+  final _quantityController = TextEditingController();
 
-    if (username != null && password != null) {
-      _usernameController.text = username;
-      _passwordController.text = password;
+  // List to store shopping items
+  List<Map<String, String>> shoppingList = [];
 
-      // Show Snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Previous login name and passwords loaded.'),
-          action: SnackBarAction(
-            label: 'Undo',
-            onPressed: () async {
-              await Future.delayed(Duration(seconds: 1));
-              _usernameController.clear();
-              _passwordController.clear();
-            },
-          ),
-        ),
-      );
+  // Add item to the shopping list
+  void addItem() {
+    if (_itemController.text.isNotEmpty && _quantityController.text.isNotEmpty) {
+      setState(() {
+        shoppingList.add({
+          'item': _itemController.text,
+          'quantity': _quantityController.text,
+        });
+      });
+      _itemController.clear();
+      _quantityController.clear();
     }
   }
 
-  void _login() async {
-    final password = _passwordController.text;
+  // Remove item from the shopping list
+  void removeItem(int index) {
     setState(() {
-      if (password == "QWERTY123") {
-        imageSource = "images/light-bulb.png"; // Correct password: Change to light bulb
-      } else {
-        imageSource = "images/stop.png"; // Incorrect password: Change to stop sign
-      }
+      shoppingList.removeAt(index);
     });
-
-    if (password == "QWERTY123") {
-      // Save credentials to shared preferences
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('username', _usernameController.text);
-      await prefs.setString('password', _passwordController.text);
-
-      // Navigate to ProfilePage after successful login
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ProfilePage(username: _usernameController.text),
-        ),
-      );
-    } else {
-      _showSaveCredentialsDialog();
-    }
   }
 
-
-  // Function to show AlertDialog for saving credentials
-  void _showSaveCredentialsDialog() {
+  // Show a confirmation dialog for item deletion
+  void confirmDelete(int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Save Credentials?'),
-          content: const Text('Would you like to save your username and password?'),
+          title: Text('Delete Item'),
+          content: Text('Do you want to delete "${shoppingList[index]['item']}"?'),
           actions: [
             TextButton(
-              onPressed: () async {
-                // Clear saved credentials if the user selects "Cancel"
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.remove('username');
-                await prefs.remove('password');
-                Navigator.of(context).pop(); // Close the dialog
+              onPressed: () {
+                Navigator.pop(context); // Close the dialog
               },
-              child: const Text('Cancel'),
+              child: Text('No'),
             ),
             TextButton(
-              onPressed: () async {
-                // Save credentials if the user selects "OK"
-                SharedPreferences prefs = await SharedPreferences.getInstance();
-                await prefs.setString('username', _usernameController.text);
-                await prefs.setString('password', _passwordController.text);
-                Navigator.of(context).pop(); // Close the dialog
+              onPressed: () {
+                removeItem(index); // Remove the item
+                Navigator.pop(context); // Close the dialog
               },
-              child: const Text('OK'),
+              child: Text('Yes'),
             ),
           ],
         );
@@ -142,61 +103,69 @@ class _MyHomePageState extends State<MyHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(
-          widget.title,
-          style: const TextStyle(color: Colors.black),
-        ),
+        title: Text('Flutter HomePage Demo'),
+        backgroundColor: Colors.deepPurple,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            // Username field
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Login',
-              ),
+          children: [
+            // Row with TextFields and Add button
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _itemController,
+                    decoration: InputDecoration(hintText: 'Enter Item'),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    controller: _quantityController,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(hintText: 'Enter Quantity'),
+                  ),
+                ),
+                TextButton(
+                  onPressed: addItem,
+                  child: Text('Add', style: TextStyle(fontSize: 16, color: Colors.deepPurple)),
+                ),
+              ],
             ),
-            const SizedBox(height: 10),
-
-            // Password field
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Password',
+            SizedBox(height: 20),
+            // Display shopping list or empty message
+            shoppingList.isEmpty
+                ? Center(child: Text('There are no items in the list'))
+                : Expanded(
+              child: ListView.builder(
+                itemCount: shoppingList.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onLongPress: () {
+                      confirmDelete(index); // Show confirmation dialog on long press
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                      margin: EdgeInsets.symmetric(vertical: 4.0),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${index + 1}. ${shoppingList[index]['item']}'),  // Row number and item name
+                          Text('Qty: ${shoppingList[index]['quantity']}'),  // Quantity
+                        ],
+                      ),
+                    ),
+                  );
+                },
               ),
-            ),
-            const SizedBox(height: 20),
-
-            // Login button
-            ElevatedButton(
-              onPressed: _login,
-              child: const Text(
-                'Login',
-                style: TextStyle(color: Colors.blue, fontSize: 30),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Image that changes based on the password entered
-            Image.asset(
-              imageSource,
-              width: 300,
-              height: 300,
             ),
           ],
         ),
-      ),
-      // Floating Action Button to clear fields
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        tooltip: 'Clear Fields',
-        child: const Icon(Icons.clear), // Icon for the FAB
       ),
     );
   }
