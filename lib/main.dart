@@ -68,7 +68,7 @@ class _MyHomePageState extends State<MyHomePage> {
     if (_controller1.text.isNotEmpty && _controller2.text.isNotEmpty) {
       int? quantity = int.tryParse(_controller2.text);
       if (quantity != null) {
-        var newItem = Todo(null, _controller1.text, quantity ); // Changed to uppercase 'Todo'
+        var newItem = Todo(null, _controller1.text, quantity );
         await todoDao.insertItem(newItem);
         var updatedList = await todoDao.findAllItems();
         setState(() {
