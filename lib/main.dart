@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'TodoDao.dart';
+import 'Todo.dart';
+import 'Database.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -10,12 +13,13 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter HomePage Demo',
+      debugShowCheckedModeBanner: false,
+      title: 'Flutter Demo',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.purpleAccent),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Shopping List App'),
+      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
@@ -30,68 +34,86 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  @override
-  Widget build(BuildContext context) {
-    return const ListPage();
-  }
-}
-
-class ListPage extends StatefulWidget {
-  const ListPage({super.key});
+  List<Todo> todoList = <Todo>[];
+  late TodoDao todoDao;
+  late TextEditingController _controller1;
+  late TextEditingController _controller2;
 
   @override
-  State<ListPage> createState() => _ListPageState();
-}
+  void initState() {
+    super.initState();
+    _controller1 = TextEditingController();
+    _controller2 = TextEditingController();
 
-class _ListPageState extends State<ListPage> {
-  final _itemController = TextEditingController();
-  final _quantityController = TextEditingController();
-
-  // List to store shopping items
-  List<Map<String, String>> shoppingList = [];
-
-  // Add item to the shopping list
-  void addItem() {
-    if (_itemController.text.isNotEmpty && _quantityController.text.isNotEmpty) {
+    $FloorToDoDatabase
+        .databaseBuilder('todo_Database.db')
+        .build()
+        .then((database) async {
+      todoDao = database.todoDao;
+      var items = await todoDao.findAllItems();
       setState(() {
-        shoppingList.add({
-          'item': _itemController.text,
-          'quantity': _quantityController.text,
-        });
+        todoList = items;
       });
-      _itemController.clear();
-      _quantityController.clear();
-    }
-  }
-
-  // Remove item from the shopping list
-  void removeItem(int index) {
-    setState(() {
-      shoppingList.removeAt(index);
     });
   }
 
-  // Show a confirmation dialog for item deletion
-  void confirmDelete(int index) {
+  @override
+  void dispose() {
+    _controller1.dispose();
+    _controller2.dispose();
+    super.dispose();
+  }
+
+  void addItem() async {
+    if (_controller1.text.isNotEmpty && _controller2.text.isNotEmpty) {
+      int? quantity = int.tryParse(_controller2.text);
+      if (quantity != null) {
+        var newItem = Todo(null, _controller1.text, quantity ); // Changed to uppercase 'Todo'
+        await todoDao.insertItem(newItem);
+        var updatedList = await todoDao.findAllItems();
+        setState(() {
+          todoList = updatedList;
+          _controller1.clear();
+          _controller2.clear();
+        });
+      } else {
+        var snackBar = SnackBar(content: const Text('Quantity must be a number'));
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    } else {
+      var snackBar = SnackBar(content: const Text('Input field is required'));
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    }
+  }
+
+  void deleteItem(int index) async {
+    await todoDao.deleteItem(todoList[index]);
+    var updatedList = await todoDao.findAllItems();
+    setState(() {
+      todoList = updatedList;
+    });
+  }
+
+  void _showDialog(int index) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Delete Item'),
-          content: Text('Do you want to delete "${shoppingList[index]['item']}"?'),
+          title: const Text("Delete Item"),
+          content: const Text("Are you sure you want to delete this item?"),
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.pop(context); // Close the dialog
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('No'),
+              child: const Text("No"),
             ),
             TextButton(
               onPressed: () {
-                removeItem(index); // Remove the item
-                Navigator.pop(context); // Close the dialog
+                deleteItem(index); // Delete the item
+                Navigator.of(context).pop(); // Close the dialog
               },
-              child: Text('Yes'),
+              child: const Text("Yes"),
             ),
           ],
         );
@@ -103,70 +125,70 @@ class _ListPageState extends State<ListPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Flutter HomePage Demo'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        title: Text(widget.title),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Row with TextFields and Add button
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _itemController,
-                    decoration: InputDecoration(hintText: 'Enter Item'),
-                  ),
+      body: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          const SizedBox(height: 20),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _controller1,
+                decoration: const InputDecoration(
+                  hintText: "Type the item here",
+                  border: OutlineInputBorder(),
                 ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: _quantityController,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(hintText: 'Enter Quantity'),
-                  ),
-                ),
-                TextButton(
-                  onPressed: addItem,
-                  child: Text('Add', style: TextStyle(fontSize: 16, color: Colors.deepPurple)),
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            // Display shopping list or empty message
-            shoppingList.isEmpty
-                ? Center(child: Text('There are no items in the list'))
-                : Expanded(
-              child: ListView.builder(
-                itemCount: shoppingList.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onLongPress: () {
-                      confirmDelete(index); // Show confirmation dialog on long press
-                    },
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
-                      margin: EdgeInsets.symmetric(vertical: 4.0),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey),
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('${index + 1}. ${shoppingList[index]['item']}'),  // Row number and item name
-                          Text('Qty: ${shoppingList[index]['quantity']}'),  // Quantity
-                        ],
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
-          ],
-        ),
+            Expanded(
+              child: TextField(
+                controller: _controller2,
+                decoration: const InputDecoration(
+                  hintText: "Type the quantity here",
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: addItem,
+              child: const Text("Add", style: TextStyle(fontSize: 15.0)),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Flexible(child: listPage()),
+        ],
       ),
     );
+  }
+
+  Widget listPage() {
+    if (todoList.isEmpty) {
+      return const Center(child: Text("There are no items in the list"));
+    } else {
+      return Expanded(
+        child: ListView.builder(
+          itemCount: todoList.length,
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onLongPress: () {
+                _showDialog(index); // Show delete dialog on long press
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text("${index + 1}:"),
+                  const SizedBox(width: 5),
+                  Text(todoList[index].name),
+                  const SizedBox(width: 10),
+                  Text(" quantity: ${todoList[index].quantity}"),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
   }
 }
