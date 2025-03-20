@@ -4,7 +4,7 @@ import 'Todo.dart';
 import 'Database.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
@@ -14,12 +14,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Flutter Demo',
+      title: 'Responsive Todo List',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.purpleAccent),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MyHomePage(title: 'Flutter HomePage Demo'),
     );
   }
 }
@@ -38,6 +38,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late TodoDao todoDao;
   late TextEditingController _controller1;
   late TextEditingController _controller2;
+  Todo? selectedItem;
 
   @override
   void initState() {
@@ -50,10 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
         .build()
         .then((database) async {
       todoDao = database.todoDao;
-      var items = await todoDao.findAllItems();
-      setState(() {
-        todoList = items;
-      });
+      loadItems(); // Load items on startup
     });
   }
 
@@ -64,131 +62,175 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
-  void addItem() async {
+  void loadItems() {
+    todoDao.findAllItems().then((items) {
+      setState(() {
+        todoList = items;
+      });
+    });
+  }
+
+  void deleteItem() {
+    if (selectedItem != null) {
+      todoDao.deleteItem(selectedItem!);
+      setState(() {
+        todoList.remove(selectedItem);
+        selectedItem = null; // Clear the selected item after deletion
+      });
+    }
+  }
+
+  void selectItem(Todo item) {
+    setState(() {
+      selectedItem = item;
+    });
+  }
+
+  void addItem() {
     if (_controller1.text.isNotEmpty && _controller2.text.isNotEmpty) {
       int? quantity = int.tryParse(_controller2.text);
       if (quantity != null) {
-        var newItem = Todo(null, _controller1.text, quantity );
-        await todoDao.insertItem(newItem);
-        var updatedList = await todoDao.findAllItems();
+        var newItem = Todo(Todo.ID++, _controller1.text, quantity);
+        todoDao.insertItem(newItem);  // Insert the item and update UI immediately
         setState(() {
-          todoList = updatedList;
+          todoList.add(newItem);
           _controller1.clear();
           _controller2.clear();
         });
       } else {
-        var snackBar = SnackBar(content: const Text('Quantity must be a number'));
-        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Quantity must be a number')),
+        );
       }
     } else {
-      var snackBar = SnackBar(content: const Text('Input field is required'));
-      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Input fields are required')),
+      );
     }
-  }
-
-  void deleteItem(int index) async {
-    await todoDao.deleteItem(todoList[index]);
-    var updatedList = await todoDao.findAllItems();
-    setState(() {
-      todoList = updatedList;
-    });
-  }
-
-  void _showDialog(int index) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Delete Item"),
-          content: const Text("Are you sure you want to delete this item?"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text("No"),
-            ),
-            TextButton(
-              onPressed: () {
-                deleteItem(index); // Delete the item
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: const Text("Yes"),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
       ),
-      body: Column(
+      body: reactiveLayout(),  //  reactiveLayout here
+      floatingActionButton: FloatingActionButton(
+        onPressed: addItem,
+        tooltip: 'Add Item',
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  // Responsive layout for Portrait and Landscape mode
+  Widget reactiveLayout() {
+    var size = MediaQuery.of(context).size;
+    var width = size.width;
+    var height = size.height;
+
+    if ((width> height)&& (width > 720)) {
+      // Landscape mode: Show list and details side by side
+      return Row(
+        children: [
+          Expanded(flex: 1, child: toDoList()),
+          Expanded(flex: 2, child: detailsPage())
+        ],
+      );
+    } else {
+      // Portrait mode: Show either list or details based on selection
+      if (selectedItem == null) {
+        return toDoList();
+      } else {
+        return detailsPage();
+      }
+    }
+  }
+
+  // ToDo List Widget
+  Widget toDoList() {
+    return Center(
+      child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[
-          const SizedBox(height: 20),
-          Row(children: [
-            Expanded(
-              child: TextField(
-                controller: _controller1,
-                decoration: const InputDecoration(
-                  hintText: "Type the item here",
-                  border: OutlineInputBorder(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              const SizedBox(width: 20),
+              Flexible(
+                child: TextField(
+                  controller: _controller1,
+                  decoration: const InputDecoration(hintText: 'Enter a ToDo Item'),
                 ),
               ),
-            ),
-            Expanded(
-              child: TextField(
-                controller: _controller2,
-                decoration: const InputDecoration(
-                  hintText: "Type the quantity here",
-                  border: OutlineInputBorder(),
+              const SizedBox(width: 8),
+              Flexible(
+                child: TextField(
+                  controller: _controller2,
+                  decoration: const InputDecoration(hintText: 'Enter quantity'),
+                  keyboardType: TextInputType.number,
                 ),
               ),
+              ElevatedButton(
+                onPressed: addItem,
+                child: const Text("Add "),
+              ),
+            ],
+          ),
+          Flexible(
+            child: ListView.builder(
+              itemCount: todoList.length,
+              itemBuilder: (context, rowNum) {
+                return GestureDetector(
+                  onTap: () {
+                    selectItem(todoList[rowNum]);
+                  },
+                  child:
+                  Text(" ${rowNum + 1}. ${todoList[rowNum].todoItem} ${todoList[rowNum].quantity}",
+                    style: TextStyle(fontSize: 24.0),
+                  ),
+                );
+              },
             ),
-            ElevatedButton(
-              onPressed: addItem,
-              child: const Text("Add", style: TextStyle(fontSize: 15.0)),
-            ),
-          ]),
-          const SizedBox(height: 10),
-          Flexible(child: listPage()),
+          ),
         ],
       ),
     );
   }
 
-  Widget listPage() {
-    if (todoList.isEmpty) {
-      return const Center(child: Text("There are no items in the list"));
-    } else {
-      return Expanded(
-        child: ListView.builder(
-          itemCount: todoList.length,
-          itemBuilder: (context, index) {
-            return GestureDetector(
-              onLongPress: () {
-                _showDialog(index); // Show delete dialog on long press
-              },
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text("${index + 1}:"),
-                  const SizedBox(width: 5),
-                  Text(todoList[index].name),
-                  const SizedBox(width: 10),
-                  Text(" quantity: ${todoList[index].quantity}"),
-                ],
+  // Details Page Widget
+  Widget detailsPage() {
+    return Column(
+      children: [
+        if (selectedItem == null)
+          const Text(
+            "Please select an item from the list",
+            style: TextStyle(fontSize: 24.0),
+          )
+        else
+          Column(
+            children: [
+              Text(
+                "ID: ${selectedItem!.id}",
+                style: const TextStyle(fontSize: 18.0),
               ),
-            );
-          },
-        ),
-      );
-    }
+              Text(
+                "Selected Item: ${selectedItem!.todoItem}",
+                style: const TextStyle(fontSize: 18.0),
+              ),
+              Text(
+                "Quantity: ${selectedItem!.quantity}",
+                style: const TextStyle(fontSize: 18.0),
+              ),
+              ElevatedButton(
+                onPressed: deleteItem,
+                child: const Text("Delete Item"),
+              ),
+            ],
+          ),
+      ],
+    );
   }
 }
