@@ -1,16 +1,22 @@
-# my_flutter_labs
+# CST2335 Mobile Development Labs
 
-A new Flutter project.
+This repository contains lab work from the CST2335 Mobile Application Development course. All projects were built using Dart and Android Studio, with a focus on developing mobile applications using Flutter.
+
+## Features
+- Hands-on mobile development using Flutter
+- Labs demonstrating navigation, state management, user input, and UI design
+- Integration of Dart programming with Android Studio for cross-platform mobile apps
+
+## Technologies Used
+- Dart
+- Flutter SDK
+- Android Studio
+
+## Status
+In Progress / Complete (update based on your course progress)
 
 ## Getting Started
+1. Clone the repository.
+2. Open in Android Studio.
+3. Run using a connected device or emulator.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
